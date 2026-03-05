@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "genkit": "genkit start -- next dev",
+    "dev": "node server.js",
+    "genkit": "genkit start -- node server.js",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_ENV=production node server.js",
     "lint": "eslint"
   },
   "dependencies": {
@@ -27,7 +27,9 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
     "tailwind-merge": "^3.5.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "ws": "^8.18.0",
+    "@google-cloud/speech": "^5.5.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
