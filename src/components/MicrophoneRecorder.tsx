@@ -11,9 +11,11 @@ const MicrophoneRecorder: React.FC = () => {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    console.log('MicrophoneRecorder component mounted');
     // Clean up WebSocket on component unmount
     return () => {
-      if (wsRef.current) {
+      console.log('MicrophoneRecorder component unmounting');
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.close();
       }
     };
@@ -73,12 +75,15 @@ const MicrophoneRecorder: React.FC = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    console.trace('stopRecording called');
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
+    }
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.close();
+    }
+    if (isRecording) {
       setIsRecording(false);
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
       console.log('Recording stopped.');
     }
   };

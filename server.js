@@ -14,7 +14,17 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 // Initialize Google Cloud Speech-to-Text client
-const client = new speech.SpeechClient();
+let client;
+try {
+  client = new speech.SpeechClient();
+  console.log('Successfully initialized Google Cloud Speech-to-Text client.');
+} catch (error) {
+  console.error('Failed to initialize Google Cloud Speech-to-Text client.', error);
+  console.error('Please ensure you have configured Google Cloud authentication correctly.');
+  console.error('See https://cloud.google.com/docs/authentication/application-default-credentials for more information.');
+  process.exit(1);
+}
+
 
 // Speech-to-Text configuration
 const requestConfig = {
@@ -52,20 +62,29 @@ app.prepare().then(() => {
       // and subsequent messages are audio data.
       if (typeof message === 'string' && message === 'start') {
         console.log('Received start signal. Starting speech recognition stream.');
-        recognizeStream = client
-          .streamingRecognize(requestConfig)
-          .on('error', console.error)
-          .on('data', (data) => {
-            // Send transcription results back to the client
-            if (data.results[0] && data.results[0].alternatives[0]) {
-              ws.send(
-                JSON.stringify({
-                  transcript: data.results[0].alternatives[0].transcript,
-                  isFinal: data.results[0].isFinal,
-                })
-              );
-            }
-          });
+        try {
+          recognizeStream = client
+            .streamingRecognize(requestConfig)
+            .on('error', (error) => {
+              console.error('Speech recognition stream error:', error);
+              ws.close();
+            })
+            .on('data', (data) => {
+              // Send transcription results back to the client
+              if (data.results[0] && data.results[0].alternatives[0]) {
+                ws.send(
+                  JSON.stringify({
+                    transcript: data.results[0].alternatives[0].transcript,
+                    isFinal: data.results[0].isFinal,
+                  })
+                );
+              }
+            });
+            console.log('Successfully created speech recognition stream.');
+        } catch (error) {
+          console.error('Failed to start speech recognition stream:', error);
+          ws.close();
+        }
       } else if (recognizeStream) {
         // Send audio data to Google Cloud Speech-to-Text
         recognizeStream.write(message);
@@ -89,11 +108,16 @@ app.prepare().then(() => {
 
   server.on('upgrade', (req, socket, head) => {
     const { pathname } = parse(req.url, true);
+    console.log(`Received upgrade request for ${pathname}`);
 
     if (pathname === '/api/speech-to-text') {
+      console.log('Handling upgrade request for /api/speech-to-text');
       wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit('connection', ws, req);
       });
+    } else {
+      console.log(`Ignoring upgrade request for ${pathname}`);
+      socket.destroy();
     }
   });
 
