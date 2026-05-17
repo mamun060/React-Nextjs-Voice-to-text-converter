@@ -1,5 +1,4 @@
-'use client'; // Add this directive at the top
-
+'use client';
 import MicrophoneRecorder from '@/components/MicrophoneRecorder';
 
 export default function Home() {
